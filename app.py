@@ -54,84 +54,60 @@ if st.button("Analyze"):
             if text:
                 manual_text += text + "\n"
 
+    issues = []
+    recommendations = []
+    references = []
     severity = "Normal"
-    issue = "System Operating Normally"
-
-    recommendation = """
-Continue routine inspection.
-Monitor sensor values.
-Follow maintenance schedule.
-"""
-
-    manual_reference = """
-Equipment operating within normal limits.
-"""
 
     if temperature > 90:
-
+        issues.append("🔥 Motor Overheating")
+        recommendations.append(
+            "Check cooling fan, improve ventilation, clean dust deposits."
+        )
+        references.append(
+            "Manual: Temperature above 90°C indicates overheating."
+        )
         severity = "Critical"
-        issue = "Motor Overheating"
 
-        recommendation = """
-• Check cooling fan
-• Improve ventilation
-• Clean dust deposits
-• Reduce operating load
-"""
+    if vibration > 6:
+        issues.append("⚙️ Bearing Failure Risk")
+        recommendations.append(
+            "Inspect bearings and check lubrication."
+        )
+        references.append(
+            "Manual: High vibration may indicate bearing wear."
+        )
+        if severity != "Critical":
+            severity = "Warning"
 
-        manual_reference = """
-If motor temperature exceeds 90°C:
-Check cooling fan and ventilation.
-Stop operation above 100°C.
-"""
-
-    elif vibration > 6:
-
-        severity = "Warning"
-        issue = "Bearing Failure Risk"
-
-        recommendation = """
-• Inspect bearings
-• Check lubrication
-• Replace damaged bearings
-"""
-
-        manual_reference = """
-High vibration indicates bearing wear.
-Inspect bearings and lubrication.
-"""
-
-    elif pressure < 50:
-
+    if pressure < 50:
+        issues.append("💧 Hydraulic Leakage")
+        recommendations.append(
+            "Inspect pipe joints and replace damaged seals."
+        )
+        references.append(
+            "Manual: Pressure below 50 PSI may indicate leakage."
+        )
         severity = "Critical"
-        issue = "Hydraulic Leakage"
 
-        recommendation = """
-• Inspect pipe joints
-• Check seals
-• Tighten loose connections
-"""
-
-        manual_reference = """
-Pressure below operating range may
-indicate leakage in the system.
-"""
-
-    elif current > 25:
-
+    if current > 25:
+        issues.append("⚡ Electrical Overload")
+        recommendations.append(
+            "Inspect motor winding and power supply."
+        )
+        references.append(
+            "Manual: Current above 25A indicates overload."
+        )
         severity = "Critical"
-        issue = "Electrical Overload"
 
-        recommendation = """
-• Inspect motor winding
-• Check power supply
-• Verify load conditions
-"""
-
-        manual_reference = """
-High current draw indicates overload.
-Inspect motor and power supply.
-"""
+    if not issues:
+        issues.append("✅ System Operating Normally")
+        recommendations.append(
+            "Continue routine inspection and maintenance."
+        )
+        references.append(
+            "Manual: All parameters within normal range."
+        )
 
     st.subheader("📋 Maintenance Report")
 
@@ -145,7 +121,10 @@ Inspect motor and power supply.
         st.metric("Pressure", f"{pressure} PSI")
         st.metric("Current", f"{current} A")
 
-    st.info(f"Detected Issue: {issue}")
+    st.markdown("### 🚨 Detected Issues")
+
+    for issue in issues:
+        st.write(issue)
 
     if severity == "Critical":
         st.error(f"Severity: {severity}")
@@ -155,17 +134,20 @@ Inspect motor and power supply.
         st.success(f"Severity: {severity}")
 
     st.markdown("### 🛠 Recommended Actions")
-    st.write(recommendation)
 
-    st.markdown("### 📖 Manual Reference")
-    st.write(manual_reference)
+    for rec in recommendations:
+        st.write("•", rec)
+
+    st.markdown("### 📖 Manual References")
+
+    for ref in references:
+        st.write("•", ref)
 
     if manual_text:
         with st.expander("View Uploaded Manual"):
             st.write(manual_text[:2000])
 
     if image:
-
         img = Image.open(image)
 
         st.markdown("### 📷 Image Evidence")
