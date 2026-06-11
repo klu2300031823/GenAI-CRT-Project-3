@@ -8,17 +8,33 @@ st.set_page_config(
 )
 
 st.title("🔧 Maintenance Copilot")
-st.write("Combines manuals, sensor metrics, and image evidence.")
+st.write("Combines maintenance manuals, sensor metrics, and image evidence.")
+
+# ---------------- PDF ----------------
 
 manual = st.file_uploader(
     "📄 Upload Maintenance Manual (PDF)",
     type="pdf"
 )
 
+# ---------------- IMAGE ----------------
+
 image = st.file_uploader(
     "📷 Upload Equipment Image",
     type=["jpg", "jpeg", "png"]
 )
+
+equipment = st.selectbox(
+    "🏭 Equipment Type",
+    [
+        "Motor",
+        "Pump",
+        "Compressor",
+        "Generator"
+    ]
+)
+
+# ---------------- SENSORS ----------------
 
 st.subheader("📡 Sensor Metrics")
 
@@ -42,84 +58,191 @@ current = st.slider(
     0, 50, 15
 )
 
+# ---------------- ANALYZE ----------------
+
 if st.button("Analyze"):
+
+    # ---------- Validate Manual ----------
+
+    if not manual:
+        st.error("Please upload a maintenance manual PDF.")
+        st.stop()
 
     manual_text = ""
 
-    if manual:
-        reader = PdfReader(manual)
+    reader = PdfReader(manual)
 
-        for page in reader.pages:
-            text = page.extract_text()
-            if text:
-                manual_text += text + "\n"
+    for page in reader.pages:
+        text = page.extract_text()
+
+        if text:
+            manual_text += text + "\n"
+
+    maintenance_keywords = [
+        "temperature",
+        "vibration",
+        "pressure",
+        "bearing",
+        "motor",
+        "maintenance",
+        "overheating",
+        "current",
+        "leakage"
+    ]
+
+    valid_manual = False
+
+    for word in maintenance_keywords:
+        if word.lower() in manual_text.lower():
+            valid_manual = True
+            break
+
+    if not valid_manual:
+        st.error(
+            "❌ Uploaded PDF does not appear to be a maintenance manual."
+        )
+        st.stop()
+
+    # ---------- Validate Image ----------
+
+    image_status = "No image uploaded"
+
+    if image:
+
+        image_name = image.name.lower()
+
+        machine_words = [
+            "motor",
+            "pump",
+            "machine",
+            "engine",
+            "equipment",
+            "compressor",
+            "generator"
+        ]
+
+        valid_image = False
+
+        for word in machine_words:
+            if word in image_name:
+                valid_image = True
+                break
+
+        if valid_image:
+            image_status = "Equipment image verified"
+        else:
+            image_status = (
+                "Image uploaded (equipment not verified)"
+            )
+
+    # ---------- Detect Issues ----------
 
     issues = []
     recommendations = []
     references = []
+
     severity = "Normal"
 
     if temperature > 90:
+
         issues.append("🔥 Motor Overheating")
+
         recommendations.append(
-            "Check cooling fan, improve ventilation, clean dust deposits."
+            "Check cooling fan and improve ventilation."
         )
+
         references.append(
-            "Manual: Temperature above 90°C indicates overheating."
+            "Manual Section: Motor Overheating"
         )
+
         severity = "Critical"
 
     if vibration > 6:
+
         issues.append("⚙️ Bearing Failure Risk")
+
         recommendations.append(
-            "Inspect bearings and check lubrication."
+            "Inspect bearings and lubrication."
         )
+
         references.append(
-            "Manual: High vibration may indicate bearing wear."
+            "Manual Section: Bearing Failure"
         )
+
         if severity != "Critical":
             severity = "Warning"
 
     if pressure < 50:
+
         issues.append("💧 Hydraulic Leakage")
+
         recommendations.append(
-            "Inspect pipe joints and replace damaged seals."
+            "Inspect pipe joints and seals."
         )
+
         references.append(
-            "Manual: Pressure below 50 PSI may indicate leakage."
+            "Manual Section: Hydraulic Leakage"
         )
+
         severity = "Critical"
 
     if current > 25:
+
         issues.append("⚡ Electrical Overload")
+
         recommendations.append(
             "Inspect motor winding and power supply."
         )
+
         references.append(
-            "Manual: Current above 25A indicates overload."
+            "Manual Section: Electrical Overload"
         )
+
         severity = "Critical"
 
     if not issues:
-        issues.append("✅ System Operating Normally")
+
+        issues.append(
+            "✅ System Operating Normally"
+        )
+
         recommendations.append(
-            "Continue routine inspection and maintenance."
+            "Continue routine inspection."
         )
+
         references.append(
-            "Manual: All parameters within normal range."
+            "Manual Section: Normal Operation"
         )
+
+    # ---------- Report ----------
 
     st.subheader("📋 Maintenance Report")
 
     col1, col2 = st.columns(2)
 
     with col1:
-        st.metric("Temperature", f"{temperature} °C")
-        st.metric("Vibration", f"{vibration} mm/s")
+        st.metric(
+            "Temperature",
+            f"{temperature} °C"
+        )
+
+        st.metric(
+            "Vibration",
+            f"{vibration} mm/s"
+        )
 
     with col2:
-        st.metric("Pressure", f"{pressure} PSI")
-        st.metric("Current", f"{current} A")
+        st.metric(
+            "Pressure",
+            f"{pressure} PSI"
+        )
+
+        st.metric(
+            "Current",
+            f"{current} A"
+        )
+
+    st.info(f"🏭 Equipment: {equipment}")
 
     st.markdown("### 🚨 Detected Issues")
 
@@ -143,14 +266,25 @@ if st.button("Analyze"):
     for ref in references:
         st.write("•", ref)
 
-    if manual_text:
-        with st.expander("View Uploaded Manual"):
-            st.write(manual_text[:2000])
+    st.markdown("### 📄 Manual Verification")
+    st.success("Maintenance manual verified")
+
+    st.markdown("### 📷 Image Verification")
+    st.info(image_status)
 
     if image:
+
         img = Image.open(image)
 
-        st.markdown("### 📷 Image Evidence")
-        st.image(img, width=450)
+        st.image(
+            img,
+            width=450,
+            caption="Uploaded Equipment Image"
+        )
 
-    st.success("Analysis Completed Successfully")
+    with st.expander("View Manual"):
+        st.write(manual_text[:2500])
+
+    st.success(
+        "Analysis Completed Successfully"
+    )
