@@ -24,23 +24,13 @@ image = st.file_uploader(
     type=["jpg", "jpeg", "png"]
 )
 
-equipment = st.selectbox(
-    "🏭 Equipment Type",
-    [
-        "Motor",
-        "Pump",
-        "Compressor",
-        "Generator"
-    ]
-)
-
 # ---------------- SENSORS ----------------
 
 st.subheader("📡 Sensor Metrics")
 
 temperature = st.slider(
-    "Motor Temperature (°C)",
-    0, 150, 70
+    "Temperature (°C)",
+    0, 150, 75
 )
 
 vibration = st.slider(
@@ -62,21 +52,26 @@ current = st.slider(
 
 if st.button("Analyze"):
 
-    # ---------- Validate Manual ----------
-
     if not manual:
         st.error("Please upload a maintenance manual PDF.")
         st.stop()
 
     manual_text = ""
 
-    reader = PdfReader(manual)
+    try:
+        reader = PdfReader(manual)
 
-    for page in reader.pages:
-        text = page.extract_text()
+        for page in reader.pages:
+            text = page.extract_text()
 
-        if text:
-            manual_text += text + "\n"
+            if text:
+                manual_text += text + "\n"
+
+    except:
+        st.error("Unable to read PDF.")
+        st.stop()
+
+    # ---------------- MANUAL VALIDATION ----------------
 
     maintenance_keywords = [
         "temperature",
@@ -93,7 +88,7 @@ if st.button("Analyze"):
     valid_manual = False
 
     for word in maintenance_keywords:
-        if word.lower() in manual_text.lower():
+        if word in manual_text.lower():
             valid_manual = True
             break
 
@@ -103,39 +98,7 @@ if st.button("Analyze"):
         )
         st.stop()
 
-    # ---------- Validate Image ----------
-
-    image_status = "No image uploaded"
-
-    if image:
-
-        image_name = image.name.lower()
-
-        machine_words = [
-            "motor",
-            "pump",
-            "machine",
-            "engine",
-            "equipment",
-            "compressor",
-            "generator"
-        ]
-
-        valid_image = False
-
-        for word in machine_words:
-            if word in image_name:
-                valid_image = True
-                break
-
-        if valid_image:
-            image_status = "Equipment image verified"
-        else:
-            image_status = (
-                "Image uploaded (equipment not verified)"
-            )
-
-    # ---------- Detect Issues ----------
+    # ---------------- ISSUE DETECTION ----------------
 
     issues = []
     recommendations = []
@@ -152,7 +115,7 @@ if st.button("Analyze"):
         )
 
         references.append(
-            "Manual Section: Motor Overheating"
+            "Temperature exceeds safe operating range."
         )
 
         severity = "Critical"
@@ -166,7 +129,7 @@ if st.button("Analyze"):
         )
 
         references.append(
-            "Manual Section: Bearing Failure"
+            "High vibration detected."
         )
 
         if severity != "Critical":
@@ -181,7 +144,7 @@ if st.button("Analyze"):
         )
 
         references.append(
-            "Manual Section: Hydraulic Leakage"
+            "Pressure below operating range."
         )
 
         severity = "Critical"
@@ -195,7 +158,7 @@ if st.button("Analyze"):
         )
 
         references.append(
-            "Manual Section: Electrical Overload"
+            "Current exceeds normal limit."
         )
 
         severity = "Critical"
@@ -207,14 +170,14 @@ if st.button("Analyze"):
         )
 
         recommendations.append(
-            "Continue routine inspection."
+            "Continue routine inspection and maintenance."
         )
 
         references.append(
-            "Manual Section: Normal Operation"
+            "All parameters are within normal operating limits."
         )
 
-    # ---------- Report ----------
+    # ---------------- REPORT ----------------
 
     st.subheader("📋 Maintenance Report")
 
@@ -242,8 +205,6 @@ if st.button("Analyze"):
             f"{current} A"
         )
 
-    st.info(f"🏭 Equipment: {equipment}")
-
     st.markdown("### 🚨 Detected Issues")
 
     for issue in issues:
@@ -251,8 +212,10 @@ if st.button("Analyze"):
 
     if severity == "Critical":
         st.error(f"Severity: {severity}")
+
     elif severity == "Warning":
         st.warning(f"Severity: {severity}")
+
     else:
         st.success(f"Severity: {severity}")
 
@@ -267,10 +230,9 @@ if st.button("Analyze"):
         st.write("•", ref)
 
     st.markdown("### 📄 Manual Verification")
-    st.success("Maintenance manual verified")
+    st.success("Maintenance manual verified successfully")
 
-    st.markdown("### 📷 Image Verification")
-    st.info(image_status)
+    st.markdown("### 📷 Image Evidence")
 
     if image:
 
@@ -282,7 +244,10 @@ if st.button("Analyze"):
             caption="Uploaded Equipment Image"
         )
 
-    with st.expander("View Manual"):
+    else:
+        st.info("No image uploaded")
+
+    with st.expander("View Uploaded Manual"):
         st.write(manual_text[:2500])
 
     st.success(
