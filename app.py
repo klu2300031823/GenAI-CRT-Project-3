@@ -2,9 +2,13 @@ import streamlit as st
 from PyPDF2 import PdfReader
 from PIL import Image
 
-st.set_page_config(page_title="Maintenance Copilot")
+st.set_page_config(
+    page_title="Maintenance Copilot",
+    layout="wide"
+)
 
 st.title("🔧 Maintenance Copilot")
+st.write("Combine maintenance manuals, sensor events, and image evidence.")
 
 manual = st.file_uploader(
     "Upload Maintenance Manual (PDF)",
@@ -13,7 +17,20 @@ manual = st.file_uploader(
 
 sensor_event = st.text_area(
     "Enter Sensor Event",
-    placeholder="Temperature = 95°C"
+    height=200,
+    placeholder="""
+Asset ID: MTR-101
+Event Time: 2026-06-11 10:30 AM
+
+Sensor Readings:
+Motor Temperature: 95°C
+Normal Range: 60°C - 85°C
+
+Alert Level: Critical
+
+Observation:
+Motor housing feels unusually hot.
+"""
 )
 
 image = st.file_uploader(
@@ -24,42 +41,105 @@ image = st.file_uploader(
 if st.button("Analyze"):
 
     if not manual:
-        st.error("Upload manual PDF")
+        st.error("Please upload a maintenance manual PDF.")
         st.stop()
 
-    text = ""
+    manual_text = ""
 
     reader = PdfReader(manual)
 
     for page in reader.pages:
-        t = page.extract_text()
-        if t:
-            text += t + "\n"
+        text = page.extract_text()
+        if text:
+            manual_text += text + "\n"
 
-    issue = "Unknown"
+    sensor = sensor_event.lower()
 
-    if "temperature" in sensor_event.lower():
-        issue = "Possible Overheating"
+    severity = "Medium"
+    issue = "Manual Inspection Required"
+    recommendation = "No matching maintenance rule found."
+    manual_section = "General Maintenance"
 
-    elif "vibration" in sensor_event.lower():
-        issue = "Possible Bearing Problem"
+    if "temperature" in sensor or "hot" in sensor:
 
-    elif "pressure" in sensor_event.lower():
-        issue = "Possible Leakage"
+        severity = "Critical"
+        issue = "Motor Overheating"
+
+        recommendation = """
+• Check cooling fan
+• Inspect ventilation path
+• Clean dust deposits
+• Stop operation if temperature exceeds safety limits
+"""
+
+        manual_section = "Overheating"
+
+    elif "vibration" in sensor or "noise" in sensor:
+
+        severity = "Warning"
+        issue = "Bearing Failure Risk"
+
+        recommendation = """
+• Inspect bearings
+• Check lubrication
+• Replace damaged bearings
+"""
+
+        manual_section = "Bearing Failure"
+
+    elif "pressure" in sensor or "leakage" in sensor:
+
+        severity = "Critical"
+        issue = "Hydraulic Leakage"
+
+        recommendation = """
+• Inspect pipe joints
+• Check seals
+• Tighten loose connections
+"""
+
+        manual_section = "Leakage"
+
+    elif "current" in sensor or "breaker" in sensor:
+
+        severity = "Critical"
+        issue = "Electrical Overload"
+
+        recommendation = """
+• Inspect motor winding
+• Check power supply
+• Verify load conditions
+"""
+
+        manual_section = "Electrical Fault"
 
     st.subheader("📋 Maintenance Report")
 
-    st.write("**Detected Issue:**", issue)
+    col1, col2 = st.columns(2)
 
-    st.write("**Sensor Event:**", sensor_event)
+    with col1:
+        st.info(f"**Detected Issue:** {issue}")
+        st.warning(f"**Severity:** {severity}")
 
-    st.write("**Relevant Manual Content:**")
-    st.write(text[:1000])
+    with col2:
+        st.success(f"**Manual Section:** {manual_section}")
+
+    st.markdown("### 📡 Sensor Event")
+    st.code(sensor_event)
+
+    st.markdown("### 🛠 Recommended Actions")
+    st.write(recommendation)
+
+    st.markdown("### 📖 Manual Reference")
+
+    if manual_text:
+        st.write(manual_text[:1500])
 
     if image:
+
         img = Image.open(image)
 
-        st.write("**Image Evidence:**")
-        st.image(img, width=300)
+        st.markdown("### 📷 Image Evidence")
+        st.image(img, width=400)
 
-    st.success("Analysis Complete")
+    st.success("Analysis Completed Successfully")
